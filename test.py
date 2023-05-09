@@ -87,7 +87,7 @@ def test(data,
         if device.type != 'cpu':
             model(torch.zeros(1, 3, imgsz, imgsz).to(device).type_as(next(model.parameters())))  # run once
         task = opt.task if opt.task in ('train', 'val', 'test') else 'val'  # path to train/val/test images
-        dataloader = create_dataloader(data[task], imgsz, batch_size, gs, opt, pad=0.5, rect=True,
+        dataloader = create_dataloader(data[task], imgsz, batch_size, gs, opt, pad=opt.test_pad, rect=opt.test_rect,
                                        prefix=colorstr(f'{task}: '))[0]
 
     if v5_metric:
@@ -295,6 +295,8 @@ if __name__ == '__main__':
     parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.001, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.65, help='IOU threshold for NMS')
+    parser.add_argument('--test-rect', action='store_true', help='rectangular test')
+    parser.add_argument('--test-pad', type=float, default=0.0, help='test pad')
     parser.add_argument('--task', default='val', help='train, val, test, speed or study')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--single-cls', action='store_true', help='treat as single-class dataset')
