@@ -537,7 +537,7 @@ if __name__ == '__main__':
     parser.add_argument('--img-size', nargs='+', type=int, default=[640, 640], help='[train, test] image sizes')
     parser.add_argument('--rect', action='store_true', help='rectangular training')
     parser.add_argument('--test-rect', action='store_true', help='rectangular test')
-    parser.add_argument('--test-pad', type=float, default=0.0, help='test pad')
+    parser.add_argument('--test-pad', type=float, default=0.5, help='test pad')
     parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume most recent training')
     parser.add_argument('--nosave', action='store_true', help='only save final checkpoint')
     parser.add_argument('--notest', action='store_true', help='only test final epoch')

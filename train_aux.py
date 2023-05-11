@@ -42,6 +42,7 @@ def train(hyp, opt, device, tb_writer=None):
     logger.info(colorstr('hyperparameters: ') + ', '.join(f'{k}={v}' for k, v in hyp.items()))
     save_dir, epochs, batch_size, total_batch_size, weights, rank = \
         Path(opt.save_dir), opt.epochs, opt.batch_size, opt.total_batch_size, opt.weights, opt.global_rank
+    test_batch_size = opt.test_batch_size
 
     # Directories
     wdir = save_dir / 'weights'
@@ -252,10 +253,10 @@ def train(hyp, opt, device, tb_writer=None):
 
     # Process 0
     if rank in [-1, 0]:
-        testloader = create_dataloader(test_path, imgsz_test, batch_size * 2, gs, opt,  # testloader
-                                       hyp=hyp, cache=opt.cache_images and not opt.notest, rect=True, rank=-1,
+        testloader = create_dataloader(test_path, imgsz_test, test_batch_size, gs, opt,  # testloader
+                                       hyp=hyp, cache=opt.cache_images and not opt.notest, rect=opt.test_rect, rank=-1,
                                        world_size=opt.world_size, workers=opt.workers,
-                                       pad=0.5, prefix=colorstr('val: '))[0]
+                                       pad=opt.test_pad, prefix=colorstr('val: '))[0]
 
         if not opt.resume:
             labels = np.concatenate(dataset.labels, 0)
@@ -410,7 +411,7 @@ def train(hyp, opt, device, tb_writer=None):
             if not opt.notest or final_epoch:  # Calculate mAP
                 wandb_logger.current_epoch = epoch + 1
                 results, maps, times = test.test(data_dict,
-                                                 batch_size=batch_size * 2,
+                                                 batch_size=test_batch_size,
                                                  imgsz=imgsz_test,
                                                  model=ema.ema,
                                                  single_cls=opt.single_cls,
@@ -490,7 +491,7 @@ def train(hyp, opt, device, tb_writer=None):
         if opt.data.endswith('coco.yaml') and nc == 80:  # if COCO
             for m in (last, best) if best.exists() else (last):  # speed, mAP tests
                 results, _, _ = test.test(opt.data,
-                                          batch_size=batch_size * 2,
+                                          batch_size=test_batch_size,
                                           imgsz=imgsz_test,
                                           conf_thres=0.001,
                                           iou_thres=0.7,
@@ -529,8 +530,11 @@ if __name__ == '__main__':
     parser.add_argument('--hyp', type=str, default='data/hyp.scratch.p5.yaml', help='hyperparameters path')
     parser.add_argument('--epochs', type=int, default=300)
     parser.add_argument('--batch-size', type=int, default=16, help='total batch size for all GPUs')
+    parser.add_argument('--test-batch-size', type=int, default=1, help='test batch size')
     parser.add_argument('--img-size', nargs='+', type=int, default=[640, 640], help='[train, test] image sizes')
     parser.add_argument('--rect', action='store_true', help='rectangular training')
+    parser.add_argument('--test-rect', action='store_true', help='rectangular test')
+    parser.add_argument('--test-pad', type=float, default=0.5, help='test pad')
     parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume most recent training')
     parser.add_argument('--nosave', action='store_true', help='only save final checkpoint')
     parser.add_argument('--notest', action='store_true', help='only test final epoch')
