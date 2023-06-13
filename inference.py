@@ -1,4 +1,6 @@
 import os
+import sys
+
 import torch
 import cv2
 import time
@@ -11,6 +13,8 @@ from models.experimental import attempt_load
 
 def load_img(img_file, img_size, is_auto, stride):
     img0 = cv2.imread(img_file)
+    if img0 is None:
+        return None, None
     img = letterbox(img0, img_size, auto=is_auto, stride=stride)[0]
     img = img[:, :, ::-1].transpose(2, 0, 1)
     img = np.ascontiguousarray(img)
@@ -73,36 +77,48 @@ class Detector(object):
         sum_time_load = 0
         sum_time_predict = 0
         img_num = 0
+        predict_num = 0
         for file_name in os.listdir(img_path):
             if file_name.lower().endswith('jpg'):
                 img_num += 1
                 if img_num % 100 == 0:
                     print(img_num)
+                    sys.stdout.flush()
                 img_file = os.path.join(img_path, file_name)
                 start_time_load = time.time()
                 img0, img = load_img(img_file, self.img_size, is_auto, self.stride)
                 end_time_load = time.time()
-                result = self.detect(img0, img)
-                end_time_predict = time.time()
-                result_converted = convert_result(result)
-                result_converted['filename'] = file_name
                 load_time = end_time_load - start_time_load
-                predict_time = end_time_predict - end_time_load
                 sum_time_load += load_time
-                sum_time_predict += predict_time
-                result_list.append(result_converted)
-                # print(load_time, predict_time, result_converted)
+                if img0 is None:
+                    print(file_name)
+                else:
+                    predict_num += 1
+                    result = self.detect(img0, img)
+                    end_time_predict = time.time()
+                    result_converted = convert_result(result)
+                    result_converted['filename'] = file_name
+                    predict_time = end_time_predict - end_time_load
+                    sum_time_predict += predict_time
+                    result_list.append(result_converted)
+                    # print(load_time, predict_time, result_converted)
         end_time = time.time()
         all_time = end_time - start_time
+        result_path = os.path.dirname(result_file)
+        if not os.path.exists(result_path):
+            os.makedirs(result_path)
         write_json(result_list, result_file)
-        print(img_num, all_time, sum_time_load, sum_time_predict)
-        print(all_time / img_num, sum_time_load / img_num, sum_time_predict / img_num)
+        print(img_num, predict_num, all_time, sum_time_load, sum_time_predict)
+        print(all_time / img_num, sum_time_load / img_num, sum_time_predict / predict_num)
 
 
 if __name__ == '__main__':
     model_path = '/home/gaoxin/model/detector/jyz_pl_v2_yolov7_map05_400_152.pt'
     img_size = 640
     class_dict = {0: 'jyz', 1: 'jyz_pl'}
+    # class_dict = {0: 'bj_bpmh', 1: 'bj_bpps', 2: 'bj_wkps', 3: 'bjdsyc', 4:'jyz_pl', 5: 'sly_dmyw', 6: 'hxq_gjtps',
+    #               7: 'hxq_gjbs', 8: 'ywzt_yfyc', 9: 'xmbhyc', 10: 'yw_gkxfw', 11: 'yw_nc', 12: 'gbps', 13: 'wcaqm',
+    #               14: 'wcgz', 15: 'xy', 16: 'kgg_ybh'}
     conf_thres = 0.53
     iou_thres = 0.65
     start_time = time.time()
