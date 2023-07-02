@@ -5,6 +5,7 @@ import cv2
 import time
 import numpy as np
 import json
+from models.yolo import Model
 from utils.datasets import letterbox
 from utils.general import check_img_size, non_max_suppression, scale_coords
 from models.experimental import attempt_load
@@ -37,7 +38,7 @@ def write_json(data, json_file):
 
 
 class Detector(object):
-    def __init__(self, model_path, img_size, class_dict, device=None):
+    def __init__(self, model_path, cfg_file, img_size, class_dict, device=None):
         self.class_dict = class_dict
         self.img_size = img_size
         # self.conf_thres = conf_thres
@@ -45,7 +46,14 @@ class Detector(object):
         if device is None:
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.device = torch.device(device)
-        self.model = attempt_load(model_path, map_location=self.device)
+        # self.model = attempt_load(model_path, map_location=self.device)
+        self.model = Model(cfg=cfg_file)
+        checkpoint = torch.load(model_path)
+        # for key in checkpoint:
+        #     print(key, checkpoint[key].shape)
+        self.model.load_state_dict(checkpoint, strict=False)
+        self.model.to(self.device)
+        self.model.eval()
         self.half = self.device.type != 'cpu'
         self.stride = max(int(self.model.stride.max()), 32)
         self.img_size = check_img_size(self.img_size, s=self.stride)
@@ -114,16 +122,21 @@ class Detector(object):
 
 
 if __name__ == '__main__':
-    model_path = r'D:\model\yolov7\merge_0601\0.841.pt'
-    class_dict = {0: 'bj_bpmh', 1: 'bj_bpps', 2: 'bj_wkps', 3: 'bjdsyc', 4:'jyz_pl', 5: 'sly_dmyw', 6: 'hxq_gjtps',
-                  7: 'hxq_gjbs', 8: 'ywzt_yfyc', 9: 'xmbhyc', 10: 'yw_gkxfw', 11: 'yw_nc', 12: 'gbps', 13: 'wcaqm',
-                  14: 'wcgz', 15: 'xy', 16: 'kgg_ybh'}
+    model_path = r'D:\model\yolov7\nr_train1_23\nr_train1_23_yolov7_best_288_7774.pt'
+    cfg_file = r'D:\workspace\python\yolov7\cfg\training\yolov7_23.yaml'
+    # class_dict = {0: 'bj_bpmh', 1: 'bj_bpps', 2: 'bj_wkps', 3: 'bjdsyc', 4:'jyz_pl', 5: 'sly_dmyw', 6: 'hxq_gjtps',
+    #               7: 'hxq_gjbs', 8: 'ywzt_yfyc', 9: 'xmbhyc', 10: 'yw_gkxfw', 11: 'yw_nc', 12: 'gbps', 13: 'wcaqm',
+    #               14: 'wcgz', 15: 'xy', 16: 'kgg_ybh'}
+    class_dict = {0: 'bj_bpmh', 1: 'bj_bpps', 2: 'bj_wkps', 3: 'bj_zz', 4: 'jyz_pl', 5: 'sly_dmyw', 6: 'hxq_gjtps',
+                  7: 'hxq_gjbs', 8: 'ywzt_yf', 9: 'xmbhyc', 10: 'yw_gkxfw', 11: 'yw_nc', 12: 'gbps', 13: 'wcaqm',
+                  14: 'wcgz', 15: 'xy', 16: 'kgg_ybh', 17:'bj_sx', 18: 'hxq_gjzc', 19: 'xmbhzc', 20: 'aqmzc',
+                  21: 'gzzc', 22: 'kgg_ybf'}
     img_size = 640
     is_auto = True
     conf_thres = 0.01
     iou_thres = 0.65
     start_time = time.time()
-    detector = Detector(model_path, img_size, class_dict)
+    detector = Detector(model_path, cfg_file, img_size, class_dict)
     end_time = time.time()
     init_time = end_time - start_time
     print(init_time)
@@ -131,5 +144,5 @@ if __name__ == '__main__':
     # img_path = r'D:\data\test\merge_0601\test50'
     img_path = r'D:\data\test\merge_0601\test_500\images'
     is_atuo = True
-    out_file = r'D:\result\merge_0601\result_test'
+    out_file = r'D:\result\merge_0601\result_test_nr_23'
     detector.test(img_path, is_atuo, conf_thres, iou_thres, out_file)
